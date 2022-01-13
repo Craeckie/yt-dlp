@@ -4,6 +4,7 @@ import collections
 import io
 import itertools
 import os
+import shutil
 import subprocess
 import time
 import re
@@ -524,8 +525,8 @@ class FFmpegExtractAudioPP(FFmpegPostProcessor):
         except Exception:
             raise PostProcessingError('error running ' + self.basename)
 
-        os.replace(path, orig_path)
-        os.replace(temp_path, new_path)
+        shutil.move(path, orig_path)
+        shutil.move(temp_path, new_path)
         information['filepath'] = new_path
         information['ext'] = extension
 
@@ -661,7 +662,7 @@ class FFmpegEmbedSubtitlePP(FFmpegPostProcessor):
         temp_filename = prepend_extension(filename, 'temp')
         self.to_screen('Embedding subtitles in "%s"' % filename)
         self.run_ffmpeg_multiple_files(input_files, temp_filename, opts)
-        os.replace(temp_filename, filename)
+        shutil.move(temp_filename, filename)
 
         files_to_delete = [] if self._already_have_subtitle else sub_filenames
         return files_to_delete, info
@@ -713,7 +714,7 @@ class FFmpegMetadataPP(FFmpegPostProcessor):
             itertools.chain(self._options(info['ext']), *options))
         for file in filter(None, files_to_delete):
             os.remove(file)  # Don't obey --keep-files
-        os.replace(temp_filename, filename)
+        shutil.move(temp_filename, filename)
         return [], info
 
     @staticmethod
@@ -828,7 +829,7 @@ class FFmpegMergerPP(FFmpegPostProcessor):
                 args.extend(['-map', '%u:v:0' % (i)])
         self.to_screen('Merging formats into "%s"' % filename)
         self.run_ffmpeg_multiple_files(info['__files_to_merge'], temp_filename, args)
-        os.rename(encodeFilename(temp_filename), encodeFilename(filename))
+        shutil.move(encodeFilename(temp_filename), encodeFilename(filename))
         return info['__files_to_merge'], info
 
     def can_merge(self):
@@ -855,7 +856,7 @@ class FFmpegFixupPostProcessor(FFmpegPostProcessor):
         self.to_screen(f'{msg} of "{filename}"')
         self.run_ffmpeg(filename, temp_filename, options)
 
-        os.replace(temp_filename, filename)
+        shutil.move(temp_filename, filename)
 
 
 class FFmpegFixupStretchedPP(FFmpegFixupPostProcessor):
@@ -1077,7 +1078,7 @@ class FFmpegThumbnailsConvertorPP(FFmpegPostProcessor):
             if thumbnail_ext != 'webp' and self.is_webp(thumbnail_filename):
                 self.to_screen('Correcting thumbnail "%s" extension to webp' % thumbnail_filename)
                 webp_filename = replace_extension(thumbnail_filename, 'webp')
-                os.replace(thumbnail_filename, webp_filename)
+                shutil.move(thumbnail_filename, webp_filename)
                 info['thumbnails'][idx]['filepath'] = webp_filename
                 info['__files_to_move'][webp_filename] = replace_extension(
                     info['__files_to_move'].pop(thumbnail_filename), 'webp')
@@ -1132,7 +1133,7 @@ class FFmpegConcatPP(FFmpegPostProcessor):
 
     def concat_files(self, in_files, out_file):
         if len(in_files) == 1:
-            os.replace(in_files[0], out_file)
+            shutil.move(in_files[0], out_file)
             return
 
         codecs = [traverse_obj(self.get_metadata_object(file), ('streams', ..., 'codec_name')) for file in in_files]
